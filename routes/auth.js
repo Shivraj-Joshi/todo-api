@@ -6,6 +6,7 @@ import { PrismaClient } from '@prisma/client';
 const router = express.Router();
 const prisma = new PrismaClient();
 
+//user registeration logic 
 
 router.post('/register', async (req, res) => {
     try {
@@ -46,6 +47,47 @@ router.post('/register', async (req, res) => {
         res.status(500).json({ error: "something went wrong" })
     }
 
+})
+
+//user login logic 
+
+router.post('/login', async (req, res) => {
+    try {
+        const { email, password } = req.body
+
+        //find user by email  
+
+        const user = await prisma.user.findUnique({
+            where: {
+                email
+            }
+        })
+
+        if (!user) {
+            return res.status(400).json({
+                error: "invalid Email or password"
+            })
+        }
+
+        //comparing the  password with stored hash
+
+        const passwordMatch = await bcrypt.compare(password, user.password)
+
+        if (!passwordMatch) {
+            return res.status(400).json({ error: "Invalid password" })
+        }
+
+        //returning successful login 
+        res.json({
+            userId: user.id,
+            email: user.email,
+            message: "Login Successful",
+
+        })
+
+    } catch (error) {
+        res.status(500).json({ error: error.message })
+    }
 })
 
 export default router   
