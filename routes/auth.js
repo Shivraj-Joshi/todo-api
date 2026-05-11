@@ -2,6 +2,8 @@ import express from 'express';
 import bcrypt from 'bcrypt'
 import { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
+import { authLimiter } from '../middleware/rateLimiter.js';
+import { body, validationResult } from 'express-validator';
 // import { use } from 'react';
 
 const router = express.Router();
@@ -9,7 +11,17 @@ const prisma = new PrismaClient();
 
 //user registeration logic 
 
-router.post('/register', async (req, res) => {
+router.post('/register', authLimiter, [
+    body('email').isEmail().withMessage('Please provide a valid email'),
+    body('password').isLength({ min: 6 }).withMessage('Password must be at least6 characters ')
+
+], async (req, res) => {
+    //check validationResult
+
+    const errors = validationResult(req)
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() })
+    }
     try {
         const { email, password } = req.body
 
@@ -52,45 +64,55 @@ router.post('/register', async (req, res) => {
 
 //user login logic 
 
-router.post('/login', async (req, res) => {
-    try {
-        const { email, password } = req.body
+router.post('/login', authLimiter, [
+    body('email').isEmail().withMessage('Please enter a valid email'),
+    body('password').isEmpty().withMessage('Password is required')
+],
+    async (req, res) => {
+        //check validationResult
 
-        //find user by email  
+        const errors = validationResult(req)
+        if (!errors.isEmpty) {
+            return res.status(400).json({ error: errors.array() })
+        }
+        try {
+            const { email, password } = req.body
 
-        const user = await prisma.user.findUnique({
-            where: {
-                email
-            }
-        })
+            //find user by email  
 
-        if (!user) {
-            return res.status(400).json({
-                error: "invalid Email or password"
+            const user = await prisma.user.findUnique({
+                where: {
+                    email
+                }
             })
+
+            if (!user) {
+                return res.status(400).json({
+                    error: "invalid Email or password"
+                })
+            }
+
+            //comparing the  password with stored hash
+
+            const passwordMatch = await bcrypt.compare(password, user.password)
+
+            if (!passwordMatch) {
+                return res.status(400).json({ error: "Invalid password" })
+            }
+
+            // generating jwt token 
+
+            const token = jwt.sign({ userId: user.id, email: user.email }, process.env.JWT_SECRET_KEY, { expiresIn: '7d' })
+
+            //returning successful login 
+            res.json({
+                message: "Login Successful",
+                token
+            })
+
+        } catch (error) {
+            res.status(500).json({ error: "something went wrong" })
         }
-
-        //comparing the  password with stored hash
-
-        const passwordMatch = await bcrypt.compare(password, user.password)
-
-        if (!passwordMatch) {
-            return res.status(400).json({ error: "Invalid password" })
-        }
-
-        // generating jwt token 
-
-        const token = jwt.sign({ userId: user.id, email: user.email }, process.env.JWT_SECRET_KEY, { expiresIn: '7d' })
-
-        //returning successful login 
-        res.json({
-            message: "Login Successful",
-            token
-        })
-
-    } catch (error) {
-        res.status(500).json({ error: "something went wrong" })
-    }
-})
+    })
 
 export default router   
