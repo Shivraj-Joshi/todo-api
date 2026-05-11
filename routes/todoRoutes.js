@@ -5,8 +5,16 @@ const router = Router();
 
 router.get('/', authenticationToken, async (req, res) => {
     try {
-        const todos = await prisma.todo.findMany();
-        res.json(todos);
+        const todos = await prisma.todo.findMany({
+            where: {
+                userId: req.user.userId
+            }
+        });
+
+        console.log('userId from token:', req.user.userId)
+        console.log('todos found:', todos)
+
+        res.json(todos)
     } catch (error) {
         res.status(500).json({ error: error.message })
     }
@@ -36,7 +44,7 @@ router.post('/', authenticationToken, async (req, res) => {
         const todo = await prisma.todo.create({
             data: {
                 title: req.body.title,
-                done: false
+                userId: req.user.userId
             }
         })
         res.status(201).json(todo)
