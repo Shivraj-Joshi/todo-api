@@ -1,9 +1,9 @@
 import { Router } from "express";
 import prisma from "../prisma.js";
-
+import authenticationToken from "../middleware/auth.js";
 const router = Router();
 
-router.get('/', async (req, res) => {
+router.get('/', authenticationToken, async (req, res) => {
     try {
         const todos = await prisma.todo.findMany();
         res.json(todos);
@@ -13,7 +13,7 @@ router.get('/', async (req, res) => {
 
 })
 
-router.get('/:id', async (req, res) => {
+router.get('/:id', authenticationToken, async (req, res) => {
 
     try {
 
@@ -31,7 +31,7 @@ router.get('/:id', async (req, res) => {
     }
 })
 
-router.post('/', async (req, res) => {
+router.post('/', authenticationToken, async (req, res) => {
     try {
         const todo = await prisma.todo.create({
             data: {
@@ -46,7 +46,7 @@ router.post('/', async (req, res) => {
 
 })
 
-router.put('/:id', async (req, res) => {
+router.put('/:id', authenticationToken, async (req, res) => {
 
     try {
         const todo = await prisma.todo.findUnique({
@@ -74,7 +74,7 @@ router.put('/:id', async (req, res) => {
 
 })
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticationToken, async (req, res) => {
     try {
         const todo = await prisma.todo.findUnique({
             where: {
