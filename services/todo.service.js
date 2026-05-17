@@ -1,11 +1,38 @@
+import { promise } from "zod";
 import prisma from "../prisma.js";
 
-export async function getAllTodos(userId) {
-    return prisma.todo.findMany({
-        where: {
-            userId
+export async function getAllTodos(userId, { page, limit, sortby, done, order }) {
+    const skip = (page - 1) * limit;
+
+    const where = { userId };
+    if (done !== undefined) {
+        where.done = done;
+    }
+
+    const [todos, total] = await Promise.all([
+        prisma.todo.findMany({
+            where,
+            skip,
+            take: limit,
+            orderBy: { [sortby]: order }
+        }),
+        prisma.todo.count({ where })
+    ]);
+    return {
+        data: todos,
+        meta: {
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit)
         }
-    });
+    }
+
+    // return prisma.todo.findMany({
+    //     where: {
+    //         userId
+    //     }
+    // });
 }
 
 export async function getTodoById(id) {
