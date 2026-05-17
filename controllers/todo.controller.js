@@ -3,8 +3,36 @@ import { createTodoSchema, updatedTodoSchema } from '../validators/todo.validato
 
 export async function getAllTodos(req, res, next) {
     try {
-        const todos = await todoServices.getAllTodos(req.user.userId);
-        res.json(todos)
+
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const sortBy = req.query.sortBy || 'createdAt';
+        const order = req.query.order || 'desc';
+
+        let done = undefined;
+
+        console.log('req.query.done:', req.query.done); // debugging the filtering issue
+        console.log('type:', typeof req.query.done); // debugging the filtering issue
+        console.log('equals true string?', req.query.done === 'true');
+
+        if (req.query.done === 'true') done = true;
+        if (req.query.done === 'false') done = false;
+
+        console.log('done after if:', done);  // ← ADD THIS
+
+        const result = await todoServices.getAllTodos(req.user.userId,
+            {
+                page,
+                limit,
+                done,
+                sortBy,
+                order
+            }
+        );
+        res.json(result);
+
+        // const todos = await todoServices.getAllTodos(req.user.userId);
+        // res.json(todos)
     } catch (error) {
         next(error);
     }
